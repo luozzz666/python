@@ -4,8 +4,6 @@ import MySQLdb
 import os
 import hashlib
 import time
-from __builtin__ import file
-from click.types import File
 
 #数据库信息
 host='192.168.230.23'
@@ -30,7 +28,7 @@ def juderepeat(md5):
 
 #获取文件的md5值
 def calcmd5(filepath):
-    with open(filepath) as f:
+    with open(filepath,'rb') as f:
         md=hashlib.md5()
         md.update(f.read())
         filemd5=md.hexdigest()
@@ -47,7 +45,6 @@ def walkpath(path):
             if os.name == 'nt':
                 filepath_format=filepath.decode('gbk').encode('utf-8')
                 filepath_format='/'.join(filepath_format.split('\\'))
-                print filepath_format
             else:
                 filepath_format=filepath.decode('gbk').encode('utf-8')
             
@@ -68,7 +65,10 @@ def walkpath(path):
             sql="insert into fileinfo (name,localpath,size,md5,status,atime,mtime,ctime,update_time) values ('%s','%s','%s','%s','%s','%s','%s','%s','%s');" %(file_format,filepath_format,size,filemd5,status,atime,mtime,ctime,nowtime)
             cursor.execute(sql)
             conn.commit()
-            
+    
+            #输出
+            if status != 0:
+                print filepath_format
 
     conn.close()
 
