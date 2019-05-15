@@ -1,10 +1,19 @@
 # _*_ coding:utf-8 _*_
+import shutil
 import logging
 import MySQLdb
 import hashlib
 import time
 import os
 
+ #移除重复文件
+def mvfile(srcfile):
+    dstfile="G:\\"+srcfile.split(':')[1]
+    path=os.path.dirname(dstfile)
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    shutil.move(srcfile, dstfile)
+    
 #判断是否重复，0为重复，其他为重复次数
 def juderepeat(md5):
     countsql="select count(1) from fileinfo where md5='%s';" %md5
@@ -57,6 +66,7 @@ def walkpath(path):
                 #输出
                 if status != 0:
                     print filepath_format
+                    mvfile(filepath)
     
         conn.close()
     else:
