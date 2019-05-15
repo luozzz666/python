@@ -1,24 +1,10 @@
 # _*_ coding:utf-8 _*_
-
+import logging
 import MySQLdb
-import os
 import hashlib
 import time
+import os
 
-#数据库信息
-host='192.168.230.23'
-user='xxx'
-passwd='xxx'
-db='xxx'
-charset='utf8'
-
-#需要处理的路径
-path=r'E:\soft'
-
-#连接数据库
-conn=MySQLdb.connect(host=host,user=user,passwd=passwd,db=db,charset=charset)
-cursor=conn.cursor()
- 
 #判断是否重复，0为重复，其他为重复次数
 def juderepeat(md5):
     countsql="select count(1) from fileinfo where md5='%s';" %md5
@@ -33,46 +19,76 @@ def calcmd5(filepath):
         md.update(f.read())
         filemd5=md.hexdigest()
         return filemd5
-#遍历目录    
+
+#遍历目录
 def walkpath(path):
-    for roots,dirs,files in os.walk(path):
-        for file in files:
-            #print file
-            file_format=file.decode('gbk').encode('utf-8')
-            filepath=os.path.join(roots,file)
-
-            #文件路径格式转换
-            if os.name == 'nt':
-                filepath_format=filepath.decode('gbk').encode('utf-8')
-                filepath_format='/'.join(filepath_format.split('\\'))
-            else:
-                filepath_format=filepath.decode('gbk').encode('utf-8')
-            
-            #文件属性
-            filedata=os.stat(filepath)
-            size=filedata[6]/1024
-            atime=filedata[7]
-            mtime=filedata[8]
-            ctime=filedata[9]
-            
-            #md5
-            filemd5=calcmd5(filepath)
-            status=juderepeat(filemd5)
-            #时间
-            nowtime=time.strftime('%Y-%m-%d %H:%M:%S')
-            
-            #插入mysql
-            sql="insert into fileinfo (name,localpath,size,md5,status,atime,mtime,ctime,update_time) values ('%s','%s','%s','%s','%s','%s','%s','%s','%s');" %(file_format,filepath_format,size,filemd5,status,atime,mtime,ctime,nowtime)
-            cursor.execute(sql)
-            conn.commit()
+    if os.path.exists(path):
+        for roots,dirs,files in os.walk(path):
+            for file in files:
+                file_format=file.decode('gbk').encode('utf-8')
+                filepath=os.path.join(roots,file)
     
-            #输出
-            if status != 0:
-                print filepath_format
+                #文件路径转换
+                if os.name == 'nt':
+                    filepath_format=filepath.decode('gbk').encode('utf-8')
+                    filepath_format='/'.join(filepath_format.split('\\'))
+                else:
+                    #filepath_format=filepath.decode('gbk').encode('utf-8')
+                    filepath_format=filepath
+                
+                #文件属性
+                filedata=os.stat(filepath)
+                size=filedata[6]/1024
+                atime=filedata[7]
+                mtime=filedata[8]
+                ctime=filedata[9]
+                
+                #md5
+                filemd5=calcmd5(filepath)
+                status=juderepeat(filemd5)
+                #时间
+                nowtime=time.strftime('%Y-%m-%d %H:%M:%S')
+                
+                #插入mysql
+                sql="insert into fileinfo (name,localpath,size,md5,status,atime,mtime,ctime,update_time) values ('%s','%s','%s','%s','%s','%s','%s','%s','%s');" %(file_format,filepath_format,size,filemd5,status,atime,mtime,ctime,nowtime)
+                cursor.execute(sql)
+                conn.commit()
+                logging.info('Process file:%s' %filepath_format)
+                #输出
+                if status != 0:
+                    print filepath_format
+    
+        conn.close()
+    else:
+        logging.error('cannot access %s: No such file or directory' %(path))
 
-    conn.close()
 
-walkpath(path)
+
+if __name__ == '__main__':
+    #遍历的目录
+    path=r'E:\soft\linux'
+
+    #日记输出
+    logging.basicConfig(level=logging.INFO,format="[%(asctime)s] - [%(levelname)s] %(message)s",filename=r'result.log')
+    
+    #mysql连接参数
+    host='192.168.230.23'
+    port=3306
+    user='xxx'
+    passwd='xxx'
+    db='xxx'
+    charset='utf8'
+    
+    #连接数据库
+    try:
+        conn=MySQLdb.connect(host=host,user=user,port=port,passwd=passwd,db=db,charset=charset)
+        cursor=conn.cursor()
+        logging.info('Connect MySql Successful : %s:%s' %(host,port))
+    except:
+        logging.error('Connect MySql ERROR : %s:%s' %(host,port))
+    
+    walkpath(path)
+
 
 #数据库建表sql
 ############################################################################################
